@@ -14,9 +14,6 @@ import org.drools.core.reteoo.builder.BuildContext;
 import org.drools.core.rule.EntryPointId;
 import org.drools.core.spi.PropagationContext;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.drools.actors.util.ActorFactory.actorOf;
 
 public class ActorBasedEntryPointNode extends EntryPointNode {
@@ -47,15 +44,12 @@ public class ActorBasedEntryPointNode extends EntryPointNode {
                              PropagationContext context,
                              ObjectTypeConf objectTypeConf,
                              InternalWorkingMemory workingMemory) {
-        //super.assertObject(handle, context, objectTypeConf, workingMemory);
-
         PropagationMessage msg = new PropagationMessage(PropagationMessage.ActionType.INSERT, handle, context, objectTypeConf, workingMemory);
         entryPointActor.tell(msg, ActorRef.noSender());
     }
 
     public static class EntryPointNodeActor extends UntypedActor {
 
-        private Map<Integer, ActorRef[]> otnMap = new HashMap<Integer, ActorRef[]>();
 
         @Override
         public void onReceive(Object message) throws Exception {
@@ -71,9 +65,8 @@ public class ActorBasedEntryPointNode extends EntryPointNode {
         }
 
         private void doAssert(PropagationMessage msg) {
-            ObjectTypeNode[] cachedNodes = msg.objectTypeConf.getObjectTypeNodes();
-            for (int i = 0, length = cachedNodes.length; i < length; i++) {
-                ActorRef otnActor = ((ActorBasedNode) cachedNodes[i]).getActor();
+            for (ObjectTypeNode cachedNode : msg.objectTypeConf.getObjectTypeNodes()) {
+                ActorRef otnActor = ((ActorBasedNode) cachedNode).getActor();
                 otnActor.tell(msg, self());
             }
         }
