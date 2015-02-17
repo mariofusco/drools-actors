@@ -4,6 +4,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.japi.Creator;
+import org.drools.actors.messages.AckMessage;
 import org.drools.actors.messages.PropagationMessage;
 import org.drools.core.phreak.SegmentUtilities;
 import org.drools.core.reteoo.LeftInputAdapterNode;
@@ -57,6 +58,8 @@ public class ActorBasedLIANode extends LeftInputAdapterNode implements ActorBase
 
             doInsertObject( msg.handle, msg.context, liaNode, msg.workingMemory,
                             lm, true, true );
+
+            getSender().tell(new AckMessage(msg.messageId), self());
         }
     }
 

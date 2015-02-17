@@ -4,6 +4,8 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.japi.Creator;
+import org.drools.actors.messages.AckMessage;
+import org.drools.actors.messages.PropagationMessage;
 import org.drools.core.reteoo.EntryPointNode;
 import org.drools.core.reteoo.ObjectSink;
 import org.drools.core.reteoo.ObjectTypeNode;
@@ -31,6 +33,8 @@ public class ActorBasedObjectTypeNode extends ObjectTypeNode implements ActorBas
 
     public static class ObjectTypeNodeActor extends UntypedActor {
 
+        private final PropagationTracker propagationTracker = new PropagationTracker();
+
         private final ObjectTypeNode objectTypeNode;
 
         public ObjectTypeNodeActor(ObjectTypeNode objectTypeNode) {
@@ -39,10 +43,22 @@ public class ActorBasedObjectTypeNode extends ObjectTypeNode implements ActorBas
 
         @Override
         public void onReceive(Object message) throws Exception {
-            ObjectSink[] sinks = objectTypeNode.getSinkPropagator().getSinks();
-            for (ObjectSink sink : sinks) {
-                ActorRef otnActor = ((ActorBasedNode) sink).getActor();
-                otnActor.tell(message, self());
+            if (message instanceof PropagationMessage) {
+                ObjectSink[] sinks = objectTypeNode.getSinkPropagator().getSinks();
+
+                long messageId = ((PropagationMessage) message).messageId;
+                if (sinks.length == 0) {
+                    getSender().tell(new AckMessage(messageId), self());
+                } else {
+                    propagationTracker.startPropagation(getSender(), messageId, sinks.length);
+                }
+
+                for (ObjectSink sink : sinks) {
+                    ActorRef otnActor = ((ActorBasedNode) sink).getActor();
+                    otnActor.tell(message, self());
+                }
+            } else if (message instanceof AckMessage) {
+                propagationTracker.ackPropagation(getSelf(), (AckMessage) message);
             }
         }
     }
